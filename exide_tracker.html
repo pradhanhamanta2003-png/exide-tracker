@@ -292,10 +292,11 @@ async function loadFromSheet() {
 
 async function save() {
   try {
-    await fetch(API_URL, {
+    const payload = JSON.stringify({ serials: db.serials, dealers: db.dealers });
+    await fetch(API_URL + '?action=saveAll', {
       method: 'POST',
-      body: JSON.stringify({ serials: db.serials, dealers: db.dealers })
-        + '&action=saveAll',
+      headers: { 'Content-Type': 'text/plain' },
+      body: payload,
     });
   } catch(e) {
     console.error('Save failed', e);
