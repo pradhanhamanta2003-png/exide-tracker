@@ -323,7 +323,7 @@ function receiveStock() {
   const serials = parseSerials(document.getElementById('recv-serials').value);
   const inv = document.getElementById('inv-no').value.trim();
   const sku = document.getElementById('inv-sku').value.trim();
-  const date = document.getElementById('inv-date').value || new Date().toISOString().slice(0,10);
+  const date = document.getElementById('inv-date').value || new Date().toLocaleDateString('en-CA');
   if (!serials.length) { alert('Please paste at least one serial number.'); return; }
   let added = 0, dupes = 0;
   serials.forEach(s => {
@@ -341,7 +341,7 @@ function receiveStock() {
 function markScan1() {
   const serials = parseSerials(document.getElementById('sell-serials').value);
   const dealer = document.getElementById('sell-dealer').value;
-  const date = document.getElementById('sell-date').value || new Date().toISOString().slice(0,10);
+  const date = document.getElementById('sell-date').value || new Date().toLocaleDateString('en-CA');
   if (!dealer) { alert('Please select a sub-dealer.'); return; }
   if (!serials.length) { alert('Please paste serial numbers.'); return; }
   let done = 0, notFound = [];
@@ -359,7 +359,7 @@ function markScan1() {
 
 function markScan2() {
   const serials = parseSerials(document.getElementById('scan2-serials').value);
-  const date = new Date().toISOString().slice(0,10);
+  const date = new Date().toLocaleDateString('en-CA');
   if (!serials.length) { alert('Please paste serial numbers.'); return; }
   let done = 0, notFound = [];
   serials.forEach(s => {
