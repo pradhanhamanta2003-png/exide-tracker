@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exide Battery Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: #222; font-size: 14px; }
+
+  .header { background: #c00; color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+  .header span { font-size: 12px; opacity: 0.85; }
+
+  .tabs { display: flex; background: #fff; border-bottom: 2px solid #e0e0e0; }
+  .tab { padding: 12px 20px; cursor: pointer; font-weight: 600; font-size: 13px; color: #888; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+  .tab.active { color: #c00; border-bottom-color: #c00; }
+
+  .content { padding: 16px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat { background: #fff; border-radius: 8px; padding: 14px; text-align: center; border: 1px solid #e8e8e8; }
+  .stat .val { font-size: 26px; font-weight: 700; color: #c00; }
+  .stat .lbl { font-size: 11px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .card { background: #fff; border-radius: 8px; border: 1px solid #e8e8e8; margin-bottom: 14px; overflow: hidden; }
+  .card-header { padding: 12px 16px; background: #fafafa; border-bottom: 1px solid #ebebeb; display: flex; align-items: center; justify-content: space-between; }
+  .card-header h3 { font-size: 13px; font-weight: 700; color: #444; }
+  .card-body { padding: 14px 16px; }
+
+  textarea { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 13px; resize: vertical; outline: none; }
+  textarea:focus { border-color: #c00; }
+
+  input[type=text], select { border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; font-size: 13px; outline: none; }
+  input[type=text]:focus, select:focus { border-color: #c00; }
+
+  .btn { padding: 9px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+  .btn-red { background: #c00; color: #fff; }
+  .btn-red:hover { background: #a00; }
+  .btn-outline { background: #fff; color: #c00; border: 1.5px solid #c00; }
+  .btn-outline:hover { background: #fff5f5; }
+  .btn-green { background: #1a7a3e; color: #fff; }
+  .btn-green:hover { background: #145e30; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  .row { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+  .row .grow { flex: 1; min-width: 140px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #fafafa; color: #666; font-weight: 600; padding: 9px 10px; text-align: left; border-bottom: 1px solid #ebebeb; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+  td { padding: 9px 10px; border-bottom: 1px solid #f2f2f2; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-received { background: #e8f4fd; color: #1565c0; }
+  .badge-s1 { background: #fff3e0; color: #e65100; }
+  .badge-s2 { background: #e8f5e9; color: #1b5e20; }
+  .badge-missing { background: #fce4ec; color: #880e4f; }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .filter-row input[type=text] { flex: 1; min-width: 160px; }
+
+  .empty { text-align: center; padding: 30px; color: #aaa; font-size: 13px; }
+
+  .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; }
+  .alert-danger { background: #fce4ec; color: #880e4f; border: 1px solid #f48fb1; }
+  .alert-success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+  .alert-info { background: #e3f2fd; color: #0d47a1; border: 1px solid #90caf9; }
+
+  .progress-bar { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .progress-bar .fill { height: 100%; background: #c00; border-radius: 3px; transition: width 0.3s; }
+
+  .scan-stages { display: flex; gap: 6px; }
+  .stage { width: 22px; height: 22px; border-radius: 50%; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .stage.done { background: #1a7a3e; color: #fff; }
+  .stage.pending { background: #eee; color: #aaa; }
+  .stage.danger { background: #c00; color: #fff; }
+
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #999; margin-bottom: 8px; }
+
+  .subdealer-chip { display: inline-block; background: #f0f0f0; border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #555; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .paste-hint { font-size: 11px; color: #999; margin-top: 5px; }
+
+  @media (max-width: 600px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat .val { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>&#9889; Exide Battery Tracker</h1>
+  <span id="hdr-date"></span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('dashboard')">Dashboard</div>
+  <div class="tab" onclick="showTab('receive')">Receive Stock</div>
+  <div class="tab" onclick="showTab('sell')">Mark as Sold</div>
+  <div class="tab" onclick="showTab('scan2')">Sub-dealer Scan</div>
+  <div class="tab" onclick="showTab('register')">Full Register</div>
+  <div class="tab" onclick="showTab('settings')">Sub-dealers</div>
+</div>
+
+<div class="content">
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="tab-content active">
+    <div class="stat-grid">
+      <div class="stat"><div class="val" id="st-total">0</div><div class="lbl">Total Received</div></div>
+      <div class="stat"><div class="val" id="st-stock" style="color:#1565c0">0</div><div class="lbl">In Stock</div></div>
+      <div class="stat"><div class="val" id="st-scan1" style="color:#e65100">0</div><div class="lbl">Scan 2 Pending</div></div>
+      <div class="stat"><div class="val" id="st-scan2" style="color:#1b5e20">0</div><div class="lbl">Fully Complete</div></div>
+    </div>
+
+    <div id="alerts-section"></div>
+
+    <div class="card">
+      <div class="card-header"><h3>Pending Actions</h3></div>
+      <div class="card-body" id="pending-list"><div class="empty">No pending actions</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Sub-dealer Summary</h3></div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Sub-dealer</th><th>Sold</th><th>Scan 1 Done</th><th>Scan 2 Done</th><th>Progress</th></tr></thead>
+          <tbody id="dealer-summary"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECEIVE STOCK -->
+  <div id="tab-receive" class="tab-content">
+    <div class="card">
+      <div class="card-header"><h3>Paste Serial Numbers from Exide Access Portal</h3></div>
+      <div class="card-body">
+        <div class="row" style="margin-bottom:10px">
+          <div class="grow">
+            <label class="section-title">Invoice Number</label>
+            <input type="text" id="inv-no" placeholder="e.g. 1109199016" style="width:100%">
+          </div>
+          <div class="grow">
+            <label class="section-title">SKU / Material Description</label>
+            <input type="text" id="inv-sku" placeholder="e.g. DRIVE100L" style="width:100%">
+          </div>
+          <div class="grow">
+            <label class="section-title">Invoice Date</label>
+            <input type="date" id="inv-date" style="width:100%">
+          </div>
+        </div>
+        <label class="section-title">Serial Numbers (paste from portal — one per line)</label>
+        <textarea id="recv-serials" rows="8" placeholder="A1C6D430548&#10;A1C6D430560&#10;A1C6D430580&#10;..."></textarea>
+        <p class="paste-hint">Copy serial numbers from Exide Access portal &rarr; Click &quot;Show&quot; on each item &rarr; Select all &rarr; Paste here</p>
+        <div style="margin-top:10px; display:flex; gap:8px; align-items:center">
+          <button class="btn btn-red" onclick="receiveStock()">Add to Stock Register</button>
+          <span id="recv-msg" style="font-size:13px; color:#1b5e20"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Recently Received</h3><span id="recent-recv-count" style="font-size:12px;color:#888"></span></div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Serial No</th><th>SKU</th><th>Invoice</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody id="recent-recv-table"><tr><td colspan="5" class="empty">No stock received yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SELL / SCAN 1 -->
+  <div id="tab-sell" class="tab-content">
+    <div class="card">
+      <div class="card-header"><h3>Mark Batteries as Sold to Sub-dealer (Scan 1)</h3></div>
+      <div class="card-body">
+        <div class="alert alert-info">After you do Scan 1 on Exide Access portal in batch &mdash; paste those serial numbers here to mark them as Scan 1 complete.</div>
+        <div class="row" style="margin-bottom:10px">
+          <div class="grow">
+            <label class="section-title">Sub-dealer Name</label>
+            <select id="sell-dealer" style="width:100%">
+              <option value="">-- Select Sub-dealer --</option>
+            </select>
+          </div>
+          <div class="grow">
+            <label class="section-title">Sale Date</label>
+            <input type="date" id="sell-date" style="width:100%">
+          </div>
+        </div>
+        <label class="section-title">Serial Numbers Scanned in Exide Portal (Scan 1) — one per line</label>
+        <textarea id="sell-serials" rows="7" placeholder="Paste serial numbers after doing Scan 1 on exideaccess.com"></textarea>
+        <div style="margin-top:10px; display:flex; gap:8px; align-items:center">
+          <button class="btn btn-red" onclick="markScan1()">Mark Scan 1 Complete</button>
+          <span id="sell-msg" style="font-size:13px;color:#1b5e20"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCAN 2 -->
+  <div id="tab-scan2" class="tab-content">
+    <div class="card">
+      <div class="card-header"><h3>Sub-dealer Forward Sale — Scan 2</h3></div>
+      <div class="card-body">
+        <div class="alert alert-info">After doing Scan 2 on Exide Access portal for sub-dealer&rsquo;s forward sales &mdash; paste those serial numbers here.</div>
+        <label class="section-title">Serial Numbers Scanned in Exide Portal (Scan 2) — one per line</label>
+        <textarea id="scan2-serials" rows="7" placeholder="Paste serial numbers after doing Scan 2 on exideaccess.com"></textarea>
+        <div style="margin-top:10px; display:flex; gap:8px; align-items:center">
+          <button class="btn btn-green" onclick="markScan2()">Mark Scan 2 Complete</button>
+          <span id="scan2-msg" style="font-size:13px;color:#1b5e20"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Scan 2 Pending — By Sub-dealer</h3></div>
+      <div class="card-body" id="scan2-pending-list"><div class="empty">No pending Scan 2</div></div>
+    </div>
+  </div>
+
+  <!-- FULL REGISTER -->
+  <div id="tab-register" class="tab-content">
+    <div class="filter-row">
+      <input type="text" id="reg-search" placeholder="Search serial no or SKU..." oninput="renderRegister()">
+      <select id="reg-status" onchange="renderRegister()">
+        <option value="">All Status</option>
+        <option value="received">In Stock</option>
+        <option value="scan1">Scan 1 Done</option>
+        <option value="scan2">Fully Complete</option>
+      </select>
+      <select id="reg-dealer" onchange="renderRegister()">
+        <option value="">All Sub-dealers</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export CSV</button>
+    </div>
+    <div class="card">
+      <div class="card-body" style="padding:0; overflow-x:auto">
+        <table>
+          <thead><tr><th>Serial No</th><th>SKU</th><th>Invoice</th><th>Sub-dealer</th><th>Received</th><th>Sold Date</th><th>Status</th></tr></thead>
+          <tbody id="reg-table"><tr><td colspan="7" class="empty">No records yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="font-size:12px;color:#999;margin-top:6px" id="reg-count"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tab-settings" class="tab-content">
+    <div class="card">
+      <div class="card-header"><h3>Manage Sub-dealers</h3></div>
+      <div class="card-body">
+        <div class="row" style="margin-bottom:14px">
+          <input type="text" id="new-dealer" placeholder="Sub-dealer name" class="grow">
+          <button class="btn btn-red" onclick="addDealer()">Add</button>
+        </div>
+        <div id="dealer-list"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+//Google script sheet ko link 
+const API_URL = 'https://script.google.com/macros/s/AKfycbxAPT15D1L2MG9ue51vEfw3W9gr3N4BxDRv7YOERmjIrTMGAN2qyNR0aKX8kMw-Xp5U/exec'; // Step 3 ka URL paste karo
+
+let db = { serials: {}, dealers: [] };
+
+async function loadFromSheet() {
+  try {
+    document.body.style.opacity = '0.5';
+    const res = await fetch(API_URL + '?action=getAll');
+    db = await res.json();
+    document.body.style.opacity = '1';
+    renderDashboard();
+    renderRecentReceived();
+    populateDealerDropdowns();
+    renderDealers();
+  } catch(e) {
+    alert('Sheet se data load nahi hua. Internet check karo.');
+    document.body.style.opacity = '1';
+  }
+}
+
+async function save() {
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ serials: db.serials, dealers: db.dealers })
+        + '&action=saveAll',
+    });
+  } catch(e) {
+    console.error('Save failed', e);
+  }
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'register') renderRegister();
+  if (name === 'scan2') renderScan2Pending();
+  if (name === 'settings') renderDealers();
+  if (name === 'sell') populateDealerDropdowns();
+}
+
+function parseSerials(text) {
+  return text.split('\n').map(s => s.trim()).filter(s => s.length > 4);
+}
+
+function receiveStock() {
+  const serials = parseSerials(document.getElementById('recv-serials').value);
+  const inv = document.getElementById('inv-no').value.trim();
+  const sku = document.getElementById('inv-sku').value.trim();
+  const date = document.getElementById('inv-date').value || new Date().toISOString().slice(0,10);
+  if (!serials.length) { alert('Please paste at least one serial number.'); return; }
+  let added = 0, dupes = 0;
+  serials.forEach(s => {
+    if (db.serials[s]) { dupes++; return; }
+    db.serials[s] = { serial: s, sku, invoice: inv, receivedDate: date, status: 'received', dealer: '', soldDate: '', scan1Date: '', scan2Date: '' };
+    added++;
+  });
+  save();
+  document.getElementById('recv-serials').value = '';
+  document.getElementById('recv-msg').textContent = added + ' added' + (dupes ? ', ' + dupes + ' already existed' : '');
+  renderRecentReceived();
+  renderDashboard();
+}
+
+function markScan1() {
+  const serials = parseSerials(document.getElementById('sell-serials').value);
+  const dealer = document.getElementById('sell-dealer').value;
+  const date = document.getElementById('sell-date').value || new Date().toISOString().slice(0,10);
+  if (!dealer) { alert('Please select a sub-dealer.'); return; }
+  if (!serials.length) { alert('Please paste serial numbers.'); return; }
+  let done = 0, notFound = [];
+  serials.forEach(s => {
+    if (db.serials[s]) { db.serials[s].status = 'scan1'; db.serials[s].dealer = dealer; db.serials[s].soldDate = date; db.serials[s].scan1Date = date; done++; }
+    else notFound.push(s);
+  });
+  save();
+  document.getElementById('sell-serials').value = '';
+  let msg = done + ' marked Scan 1 complete';
+  if (notFound.length) msg += '. ' + notFound.length + ' serial(s) not found in stock — check if received.';
+  document.getElementById('sell-msg').textContent = msg;
+  renderDashboard();
+}
+
+function markScan2() {
+  const serials = parseSerials(document.getElementById('scan2-serials').value);
+  const date = new Date().toISOString().slice(0,10);
+  if (!serials.length) { alert('Please paste serial numbers.'); return; }
+  let done = 0, notFound = [];
+  serials.forEach(s => {
+    if (db.serials[s]) { db.serials[s].status = 'scan2'; db.serials[s].scan2Date = date; done++; }
+    else notFound.push(s);
+  });
+  save();
+  document.getElementById('scan2-serials').value = '';
+  let msg = done + ' marked Scan 2 complete (fully done!)';
+  if (notFound.length) msg += '. ' + notFound.length + ' not found.';
+  document.getElementById('scan2-msg').textContent = msg;
+  renderScan2Pending();
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const all = Object.values(db.serials);
+  const total = all.length;
+  const stock = all.filter(s => s.status === 'received').length;
+  const s1 = all.filter(s => s.status === 'scan1').length;
+  const s2 = all.filter(s => s.status === 'scan2').length;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-stock').textContent = stock;
+  document.getElementById('st-scan1').textContent = s1;
+  document.getElementById('st-scan2').textContent = s2;
+
+  const alerts = document.getElementById('alerts-section');
+  alerts.innerHTML = '';
+  if (s1 > 0) alerts.innerHTML += '<div class="alert alert-danger">&#9888; ' + s1 + ' batteries sold but Scan 2 still pending — incentive at risk!</div>';
+  if (stock > 50) alerts.innerHTML += '<div class="alert alert-info">&#8505; ' + stock + ' batteries in stock not yet sold to any sub-dealer.</div>';
+
+  const pending = document.getElementById('pending-list');
+  if (s1 === 0 && stock === 0) { pending.innerHTML = '<div class="empty">All done! No pending actions.</div>'; }
+  else {
+    let html = '<table><thead><tr><th>Serial No</th><th>SKU</th><th>Sub-dealer</th><th>Sold Date</th><th>Pending</th></tr></thead><tbody>';
+    all.filter(s => s.status !== 'scan2').slice(0,50).forEach(s => {
+      const pend = s.status === 'received' ? '<span class="badge badge-received">Scan 1 pending</span>' : '<span class="badge badge-s1">Scan 2 pending</span>';
+      html += '<tr><td style="font-family:monospace">' + s.serial + '</td><td>' + (s.sku||'-') + '</td><td>' + (s.dealer||'-') + '</td><td>' + (s.soldDate||'-') + '</td><td>' + pend + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    if (all.filter(s=>s.status!=='scan2').length > 50) html += '<p style="font-size:12px;color:#888;padding:8px">Showing first 50. See Full Register for all.</p>';
+    pending.innerHTML = html;
+  }
+
+  const dealers = db.dealers;
+  const tbody = document.getElementById('dealer-summary');
+  if (!dealers.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No sub-dealers added yet</td></tr>'; return; }
+  tbody.innerHTML = dealers.map(d => {
+    const dsold = all.filter(s => s.dealer === d);
+    const ds1 = dsold.filter(s => s.status === 'scan1' || s.status === 'scan2').length;
+    const ds2 = dsold.filter(s => s.status === 'scan2').length;
+    const pct = dsold.length ? Math.round(ds2/dsold.length*100) : 0;
+    return '<tr><td>' + d + '</td><td>' + dsold.length + '</td><td>' + ds1 + '</td><td>' + ds2 + '</td><td><div class="progress-bar"><div class="fill" style="width:' + pct + '%"></div></div><span style="font-size:11px;color:#888">' + pct + '%</span></td></tr>';
+  }).join('');
+}
+
+function renderRecentReceived() {
+  const all = Object.values(db.serials).sort((a,b) => b.receivedDate.localeCompare(a.receivedDate)).slice(0,20);
+  const tbody = document.getElementById('recent-recv-table');
+  if (!all.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No stock received yet</td></tr>'; return; }
+  tbody.innerHTML = all.map(s => '<tr><td style="font-family:monospace">' + s.serial + '</td><td>' + (s.sku||'-') + '</td><td>' + (s.invoice||'-') + '</td><td>' + s.receivedDate + '</td><td><span class="badge badge-received">Received</span></td></tr>').join('');
+  document.getElementById('recent-recv-count').textContent = 'Last 20 of ' + Object.keys(db.serials).length;
+}
+
+function renderRegister() {
+  populateDealerDropdowns();
+  const search = document.getElementById('reg-search').value.toLowerCase();
+  const status = document.getElementById('reg-status').value;
+  const dealer = document.getElementById('reg-dealer').value;
+  let all = Object.values(db.serials);
+  if (search) all = all.filter(s => s.serial.toLowerCase().includes(search) || (s.sku||'').toLowerCase().includes(search));
+  if (status) all = all.filter(s => s.status === status);
+  if (dealer) all = all.filter(s => s.dealer === dealer);
+  const tbody = document.getElementById('reg-table');
+  if (!all.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No records found</td></tr>'; document.getElementById('reg-count').textContent = ''; return; }
+  const statusBadge = s => {
+    if (s.status === 'scan2') return '<span class="badge badge-s2">Complete</span>';
+    if (s.status === 'scan1') return '<span class="badge badge-s1">Scan 2 Pending</span>';
+    return '<span class="badge badge-received">In Stock</span>';
+  };
+  tbody.innerHTML = all.map(s => '<tr><td style="font-family:monospace;font-size:12px">' + s.serial + '</td><td>' + (s.sku||'-') + '</td><td>' + (s.invoice||'-') + '</td><td>' + (s.dealer ? '<span class="subdealer-chip">' + s.dealer + '</span>' : '-') + '</td><td>' + s.receivedDate + '</td><td>' + (s.soldDate||'-') + '</td><td>' + statusBadge(s) + '</td></tr>').join('');
+  document.getElementById('reg-count').textContent = 'Showing ' + all.length + ' records';
+}
+
+function renderScan2Pending() {
+  const s1 = Object.values(db.serials).filter(s => s.status === 'scan1');
+  const el = document.getElementById('scan2-pending-list');
+  if (!s1.length) { el.innerHTML = '<div class="empty">No Scan 2 pending — great!</div>'; return; }
+  const byDealer = {};
+  s1.forEach(s => { if (!byDealer[s.dealer]) byDealer[s.dealer] = []; byDealer[s.dealer].push(s); });
+  el.innerHTML = Object.entries(byDealer).map(([d, items]) =>
+    '<div style="margin-bottom:12px"><div class="section-title">' + (d||'Unassigned') + ' — ' + items.length + ' pending</div>' +
+    '<div style="font-family:monospace;font-size:12px;background:#fafafa;padding:8px;border-radius:6px;border:1px solid #eee;line-height:1.8">' + items.map(i=>i.serial).join('&nbsp;&nbsp; ') + '</div></div>'
+  ).join('');
+}
+
+function addDealer() {
+  const name = document.getElementById('new-dealer').value.trim();
+  if (!name) return;
+  if (db.dealers.includes(name)) { alert('Already exists.'); return; }
+  db.dealers.push(name); save();
+  document.getElementById('new-dealer').value = '';
+  renderDealers(); populateDealerDropdowns();
+}
+
+function removeDealer(name) {
+  db.dealers = db.dealers.filter(d => d !== name); save();
+  renderDealers(); populateDealerDropdowns();
+}
+
+function renderDealers() {
+  const el = document.getElementById('dealer-list');
+  if (!db.dealers.length) { el.innerHTML = '<div class="empty">No sub-dealers added yet</div>'; return; }
+  el.innerHTML = db.dealers.map(d => '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f2f2f2"><span>' + d + '</span><button class="btn btn-outline btn-sm" onclick="removeDealer(\'' + d.replace(/'/g,"\\'") + '\')">Remove</button></div>').join('');
+}
+
+function populateDealerDropdowns() {
+  ['sell-dealer', 'reg-dealer'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = id === 'sell-dealer' ? '<option value="">-- Select Sub-dealer --</option>' : '<option value="">All Sub-dealers</option>';
+    db.dealers.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = d; el.appendChild(o); });
+    el.value = cur;
+  });
+}
+
+function exportCSV() {
+  const all = Object.values(db.serials);
+  const headers = ['Serial No','SKU','Invoice','Sub-dealer','Received Date','Sold Date','Scan1 Date','Scan2 Date','Status'];
+  const rows = all.map(s => [s.serial, s.sku, s.invoice, s.dealer, s.receivedDate, s.soldDate, s.scan1Date, s.scan2Date, s.status].join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const a = document.createElement('a'); a.href = 'data:text/csv,' + encodeURIComponent(csv); a.download = 'exide_tracker_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
+}
+
+document.getElementById('hdr-date').textContent = new Date().toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'});
+document.getElementById('inv-date').value = new Date().toISOString().slice(0,10);
+document.getElementById('sell-date').value = new Date().toISOString().slice(0,10);
+
+loadFromSheet(); // yeh sab load karega automatically
+</script>
+</body>
+</html>
