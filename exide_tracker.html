@@ -275,22 +275,38 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxAPT15D1L2MG9ue51vEfw3
 let db = { serials: {}, dealers: [] };
 
 async function loadFromSheet() {
-  try {
-    document.body.style.opacity = '0.5';
-    const res = await fetch(API_URL + '?action=getAll');
-    db = await res.json();
-    document.body.style.opacity = '1';
+  const local = localStorage.getItem('exide_db');
+  if (local) {
+    db = JSON.parse(local);
     renderDashboard();
     renderRecentReceived();
     populateDealerDropdowns();
     renderDealers();
+  }
+  try {
+    const res = await fetch(API_URL + '?action=getAll');
+    const sheetData = await res.json();
+    const sheetCount = Object.keys(sheetData.serials || {}).length;
+    const localCount = Object.keys(db.serials || {}).length;
+    if (sheetCount >= localCount) {
+      db = sheetData;
+      localStorage.setItem('exide_db', JSON.stringify(db));
+      renderDashboard();
+      renderRecentReceived();
+      populateDealerDropdowns();
+      renderDealers();
+    }
   } catch(e) {
-    alert('Sheet se data load nahi hua. Internet check karo.');
-    document.body.style.opacity = '1';
+    console.log('Sheet sync failed, using local data');
   }
 }
 
-async function save() {
+function save() {
+  localStorage.setItem('exide_db', JSON.stringify(db));
+  syncToSheet();
+}
+
+async function syncToSheet() {
   try {
     const payload = JSON.stringify({ serials: db.serials, dealers: db.dealers });
     await fetch(API_URL + '?action=saveAll', {
@@ -299,10 +315,10 @@ async function save() {
       body: payload,
     });
   } catch(e) {
-    console.error('Save failed', e);
+    console.log('Sheet sync failed:', e);
   }
 }
-
+ 
 function showTab(name) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
