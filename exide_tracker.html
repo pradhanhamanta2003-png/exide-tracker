@@ -96,7 +96,10 @@
 
 <div class="header">
   <h1>&#9889; Exide Battery Tracker</h1>
-  <span id="hdr-date"></span>
+  <div style="display:flex;align-items:center;gap:12px">
+    <button onclick="forceSync()" style="background:#fff;color:#c00;border:none;padding:6px 14px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer">🔄 Sync</button>
+    <span id="hdr-date"></span>
+  </div>
 </div>
 
 <div class="tabs">
@@ -516,6 +519,25 @@ document.getElementById('inv-date').value = new Date().toISOString().slice(0,10)
 document.getElementById('sell-date').value = new Date().toISOString().slice(0,10);
 
 loadFromSheet(); // yeh sab load karega automatically
+
+ async function forceSync() {
+  try {
+    localStorage.removeItem('exide_db');
+    document.body.style.opacity = '0.5';
+    const res = await fetch(API_URL + '?action=getAll');
+    db = await res.json();
+    localStorage.setItem('exide_db', JSON.stringify(db));
+    document.body.style.opacity = '1';
+    renderDashboard();
+    renderRecentReceived();
+    populateDealerDropdowns();
+    renderDealers();
+    alert('Sync complete! ' + Object.keys(db.serials).length + ' records loaded.');
+  } catch(e) {
+    document.body.style.opacity = '1';
+    alert('Sync failed. Internet check karo.');
+  }
+}
 </script>
 </body>
 </html>
