@@ -518,8 +518,6 @@ document.getElementById('hdr-date').textContent = new Date().toLocaleDateString(
 document.getElementById('inv-date').value = new Date().toISOString().slice(0,10);
 document.getElementById('sell-date').value = new Date().toISOString().slice(0,10);
 
-loadFromSheet(); // yeh sab load karega automatically
-
  async function forceSync() {
   try {
     localStorage.removeItem('exide_db');
@@ -538,6 +536,9 @@ loadFromSheet(); // yeh sab load karega automatically
     alert('Sync failed. Internet check karo.');
   }
 }
+
+loadFromSheet(); // yeh sab load karega automatically
+ 
 </script>
 </body>
 </html>
