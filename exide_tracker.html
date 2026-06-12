@@ -445,7 +445,7 @@ function renderRecentReceived() {
 
 function renderRegister() {
   populateDealerDropdowns();
-  const search = document.getElementById('reg-search').value.toLowerCase();
+  const search = document.getElementById('reg-search').value.trim().toLowerCase();
   const status = document.getElementById('reg-status').value;
   const dealer = document.getElementById('reg-dealer').value;
   let all = Object.values(db.serials);
