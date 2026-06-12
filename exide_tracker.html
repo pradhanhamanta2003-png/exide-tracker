@@ -449,7 +449,13 @@ function renderRegister() {
   const status = document.getElementById('reg-status').value;
   const dealer = document.getElementById('reg-dealer').value;
   let all = Object.values(db.serials);
-  if (search) all = all.filter(s => s.serial.toLowerCase().includes(search) || (s.sku||'').toLowerCase().includes(search));
+  if (search) all = all.filter(s => 
+    (s.serial||'').toLowerCase().includes(search) || 
+    (s.sku||'').toLowerCase().includes(search) ||
+    (s.invoice||'').toLowerCase().includes(search) ||
+    (s.dealer||'').toLowerCase().includes(search)
+  );
+ 
   if (status) all = all.filter(s => s.status === status);
   if (dealer) all = all.filter(s => s.dealer === dealer);
   const tbody = document.getElementById('reg-table');
